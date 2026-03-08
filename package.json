@@ -1,0 +1,16 @@
+{
+  "name": "nero-launcher",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "inquirer": "^13.3.0"
+  }
+}
