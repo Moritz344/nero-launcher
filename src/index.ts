@@ -5,7 +5,8 @@ import { spawn, exec } from 'child_process';
 import os from 'os';
 import blessed from "blessed";
 
-// TODO: make it smaller like otter-launcher
+// TODO: layout it like otter-launcher
+// TODO: live search changes
 
 const screen = blessed.screen({
   smartCSR: true,
