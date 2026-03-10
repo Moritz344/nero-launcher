@@ -3,79 +3,42 @@ import { readdir } from 'fs/promises';
 import { readFileSync } from 'fs';
 import { spawn, exec } from 'child_process';
 import os from 'os';
-import blessed from "blessed";
+import { Command } from "commander";
+import chalk from 'chalk';
+import open from 'open';
 
-// TODO: layout it like otter-launcher
-// TODO: live search changes
+var searchMode: "app" | "web" | "start" = "app";
 
-const screen = blessed.screen({
-  smartCSR: true,
-  title: "Nero Launcher",
-  debug: true
-});
+const program = new Command();
 
-const box = blessed.box({
-  parent: screen,
-  tags: true,
-  top: "center",
-  left: "center",
-  scrollable: true,
-  content: "",
-  width: "40%",
-  border: 'line',
-  height: "100%",
-  style: {
-  }
-});
+async function HandleArgv() {
+  program
+    .name("nero-launcher")
+    .description("cli app launcher for linux")
+    .version("0.0.0");
+
+  program
+    .command("app")
+    .action(() => {
+      searchMode = "app";
+    });
+
+  program
+    .command("web")
+    .action(() => {
+      searchMode = "web";
+    });
+
+  program
+    .command("start")
+    .action(() => {
+      searchMode = "start";
+    });
 
 
-var list = blessed.list({
-  parent: box,
-  label: "Apps",
-  top: '100',
-  left: 'center',
-  width: '95%',
-  height: '50%',
-  border: 'line',
-  vi: true,
-  mouse: true,
-  keys: true,
-  style: {
-    selected: { bg: "blue", fg: "white" },
-    border: { fg: "transparent" }
-  },
-  items: [],
-});
-
-var detailsBox = blessed.box({
-  parent: box,
-  label: "Details",
-  bottom: "0",
-  left: "center",
-  scrollable: true,
-  content: "",
-  width: "95%",
-  border: 'line',
-  height: "37%",
-  style: {
-    selected: { bg: "blue", fg: "white" },
-    border: { fg: "white" }
-  }
-});
-
-var input = blessed.textbox({
-  parent: box,
-  top: '0',
-  left: 'center',
-  width: '95%',
-  height: '10%',
-  inputOnFocus: true,
-  label: "Search",
-  mouse: true,
-  border: {
-    type: 'line'
-  },
-});
+  program.parse(process.argv);
+}
+HandleArgv();
 
 async function initDesktopFiles(path: string) {
   let desktopFiles = await readdir(path);
@@ -98,7 +61,7 @@ function getUserInfo() {
   return os.userInfo();
 }
 
-async function launch(e: string) {
+async function launch(e: any) {
   if (!e) {
     console.log("Error: ", e)
     return;
@@ -108,76 +71,101 @@ async function launch(e: string) {
       console.log(error);
       return;
     }
+    //console.log(stdout);
   });
+  //process.exit(0);
 }
 
-function searchApp(searchString: string, apps: any) {
-  let results = apps.filter((files: any) => files.name.toLowerCase().includes(searchString.toLowerCase()));
-  list.setItems(results.map((app: any) => app.name))
-  screen.render();
-  list.focus();
-  return results;
+async function searchApp(apps: any) {
+  try {
+    const answer = await search({
+      message: 'app',
+      source: async (input) => {
+        if (!input) {
+          return apps;
+        }
+
+        const filtered = apps.filter((app: any) =>
+          app.name.toLowerCase().includes(input.toLowerCase())
+        );
+
+        return filtered.map((app: any) => ({
+          name: app.name,
+          value: app.exec,
+          description: app.desc,
+        }));
+      },
+    });
+    if (answer) {
+      launch(answer);
+      console.log(answer);
+    }
+  } catch (err) {
+    console.log("Goodbye");
+    return;
+  }
 }
 
-function displayInfo(userInfo: any) {
-  console.log(userInfo.username);
-  console.log(userInfo.shell);
-}
 
-function updateDetailsBox(currentApps: any) {
-  const index = list.selected;
-  screen.debug(index);
-  const findItem = currentApps[index];
-  let detailsDesc = `\n Name: ${findItem.name}\n Exec: ${findItem.exec}\n \n Description: ${findItem.desc || 'No Description found'}`;
-  detailsBox.setContent(detailsDesc);
-  screen.render();
-
-}
-
-async function main() {
+async function initSearchModeApp() {
+  console.clear();
   let userInfo: any = getUserInfo();
   let appsLocal = await initDesktopFiles("/usr/share/applications/"); // localy installed apps
   let appsUser = await initDesktopFiles(userInfo.homedir + "/.local/share/applications/"); // user installed apps
   let mergedArray = appsLocal.concat(appsUser);
   mergedArray.shift();
+  searchApp(mergedArray);
 
-  let currentApps: any;
+}
 
-  input.on('submit', async (value: string) => {
-    screen.debug(value);
-    currentApps = searchApp(value, mergedArray);
-    updateDetailsBox(currentApps);
-    screen.render();
-  });
+async function initStartMenu() {
+  console.clear();
+  try {
+    let userInfo: any = getUserInfo();
+    console.log(userInfo.username);
+    console.log("type " + chalk.yellow('app') + ' to search for apps');
+    console.log("type " + chalk.yellow('web') + ' to search in the web');
+    const answer = await input({ message: '' });
+    if (answer == "app") {
+      initSearchModeApp();
+    } else if (answer == "web") {
+      initSearchModeWeb();
+    }
+  } catch (err) {
+    console.log("Goodbye");
+    return;
+  }
 
-  list.on("select", async (item: any, index: number) => {
-    updateDetailsBox(currentApps);
-    launch(currentApps[index].exec);
-  });
 
 
-  list.key(['up', 'down', 'j', 'k', 'C-d', 'C-u', 'g'], () => {
-    updateDetailsBox(currentApps);
-  });
+}
+
+async function initSearchModeWeb() {
+  console.clear();
+  try {
+    const webSearch = await input({ message: 'web' });
+    await open('https://google.com/search?q=' + webSearch);
+  } catch (err) {
+    console.log("Goodbye");
+    return;
+  }
+
+}
+
+async function main() {
+  switch (searchMode) {
+    case "app":
+      initSearchModeApp();
+      break;
+    case "web":
+      initSearchModeWeb();
+      break;
+    case "start":
+      initStartMenu();
+      break;
+  }
 
 
-  input.focus();
-
-  screen.key(['escape', 'q', 'C-c'], () => {
-    process.exit(0);
-  });
-
-  screen.on('error', (err: any) => {
-    console.error('Screen error:', err);
-  });
-
-  screen.key(["0"], () => input.focus());
-  screen.key(["1"], () => list.focus());
-
-  screen.append(box);
-  box.append(list);
-  screen.render();
 }
 
 main();
-
