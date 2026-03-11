@@ -1,0 +1,6 @@
+[general]
+show_stdout = false
+web_search_engine = "duckduckgo" # duckduckgo,google
+
+[interface]
+theme = "gruvbox" # gruvbox, nord

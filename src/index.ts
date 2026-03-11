@@ -1,11 +1,53 @@
 import { input, search } from '@inquirer/prompts';
-import { readdir } from 'fs/promises';
-import { readFileSync } from 'fs';
 import { spawn, exec } from 'child_process';
 import os from 'os';
 import { Command } from "commander";
 import chalk from 'chalk';
 import open from 'open';
+import toml from 'bun:toml';
+import { readdir } from 'fs/promises';
+import { readFileSync } from 'fs';
+import {
+  GruvboxTheme,
+  NordTheme
+} from "./themes.ts";
+
+// TODO: theme is not working for web search only working when start => web
+
+var config: any;
+var userTheme: any;
+var webSearchEngine: string = "";
+
+
+async function loadConfigFile() {
+  try {
+    Bun.file('config.toml').text().then(text => {
+      config = toml.parse(text);
+      let searchEngineInput = config.general.web_search_engine;
+      let userThemeInput = config.interface.theme;
+
+      // set search engine to use for web search
+      if (searchEngineInput == "duckduckgo") {
+        webSearchEngine = "duckduckgo.com";
+      } else if (searchEngineInput == "google") {
+        webSearchEngine = "google.com";
+      } else {
+        webSearchEngine = "google.com";
+      }
+
+      // set user theme
+      if (userThemeInput.toLowerCase() == "gruvbox") {
+        userTheme = GruvboxTheme;
+      } else if (userThemeInput.toLowerCase() == "nord") {
+        userTheme = NordTheme;
+      }
+
+    });
+
+  } catch (err) {
+    console.log("Error loading config:", err);
+  }
+}
 
 var searchMode: "app" | "web" | "start" = "app";
 
@@ -21,24 +63,38 @@ async function HandleArgv() {
     .command("app")
     .action(() => {
       searchMode = "app";
+      initSearchModeApp();
+      return;
     });
 
   program
     .command("web")
     .action(() => {
       searchMode = "web";
+      initSearchModeWeb();
+      return;
     });
 
   program
     .command("start")
     .action(() => {
       searchMode = "start";
+      initStartMenu();
+      return;
     });
+
+  if (process.argv.length <= 2) {
+    searchMode = "start";
+    initStartMenu();
+    return;
+  }
+
 
 
   program.parse(process.argv);
 }
-HandleArgv();
+
+
 
 async function initDesktopFiles(path: string) {
   let desktopFiles = await readdir(path);
@@ -66,20 +122,16 @@ async function launch(e: any) {
     console.log("Error: ", e)
     return;
   }
-  exec(e, (error, stdout, stderr) => {
-    if (error) {
-      console.log(error);
-      return;
-    }
-    //console.log(stdout);
-  });
-  //process.exit(0);
+  const args = e.split(' ');
+  const cmd = args.shift();
+  spawn(cmd!, args, { stdio: (config.general.show_stdout) ? 'inherit' : 'ignore' });
 }
 
 async function searchApp(apps: any) {
   try {
     const answer = await search({
       message: 'app',
+      theme: userTheme,
       source: async (input) => {
         if (!input) {
           return apps;
@@ -98,10 +150,8 @@ async function searchApp(apps: any) {
     });
     if (answer) {
       launch(answer);
-      console.log(answer);
     }
   } catch (err) {
-    console.log("Goodbye");
     return;
   }
 }
@@ -132,8 +182,7 @@ async function initStartMenu() {
       initSearchModeWeb();
     }
   } catch (err) {
-    console.log("Goodbye");
-    return;
+    process.exit(0);
   }
 
 
@@ -143,29 +192,18 @@ async function initStartMenu() {
 async function initSearchModeWeb() {
   console.clear();
   try {
-    const webSearch = await input({ message: 'web' });
-    await open('https://google.com/search?q=' + webSearch);
+
+    const webSearch = await input({ message: 'web', theme: userTheme });
+    await open('https://' + webSearchEngine + '/search?q=' + webSearch);
   } catch (err) {
-    console.log("Goodbye");
-    return;
+    process.exit(0);
   }
 
 }
 
 async function main() {
-  switch (searchMode) {
-    case "app":
-      initSearchModeApp();
-      break;
-    case "web":
-      initSearchModeWeb();
-      break;
-    case "start":
-      initStartMenu();
-      break;
-  }
-
-
+  await loadConfigFile();
+  await HandleArgv();
 }
 
 main();
