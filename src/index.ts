@@ -11,45 +11,55 @@ import {
   GruvboxTheme,
   NordTheme
 } from "./themes.ts";
+import { resolve } from "path";
 
 // TODO: theme is not working for web search only working when start => web
+// TODO: show number of found apps
 
 var config: any;
 var userTheme: any;
 var webSearchEngine: string = "";
 
+const pkg = JSON.parse(await Bun.file(resolve(import.meta.dirname, "../package.json")).text());
+
+
 
 async function loadConfigFile() {
+  let default_config_path = os.homedir() + "/.config/nero-launcher/config.toml";
+  const file = Bun.file(default_config_path);
+  let fileExists = await file.exists();
+
+  if (!fileExists) {
+    await Bun.write(default_config_path, Bun.file(resolve(import.meta.dirname, "./config.toml")));
+  }
+
   try {
-    Bun.file('config.toml').text().then(text => {
-      config = toml.parse(text);
-      let searchEngineInput = config.general.web_search_engine;
-      let userThemeInput = config.interface.theme;
+    const text = await Bun.file(default_config_path).text();
+    config = toml.parse(text);
 
-      // set search engine to use for web search
-      if (searchEngineInput == "duckduckgo") {
-        webSearchEngine = "duckduckgo.com";
-      } else if (searchEngineInput == "google") {
-        webSearchEngine = "google.com";
-      } else {
-        webSearchEngine = "google.com";
-      }
+    let searchEngineInput = config.general.web_search_engine;
+    let userThemeInput = config.interface.theme;
 
-      // set user theme
-      if (userThemeInput.toLowerCase() == "gruvbox") {
-        userTheme = GruvboxTheme;
-      } else if (userThemeInput.toLowerCase() == "nord") {
-        userTheme = NordTheme;
-      }
+    if (searchEngineInput == "duckduckgo") {
+      webSearchEngine = "duckduckgo.com";
+    } else if (searchEngineInput == "google") {
+      webSearchEngine = "google.com";
+    } else {
+      webSearchEngine = "google.com";
+    }
 
-    });
+    if (userThemeInput.toLowerCase() == "gruvbox") {
+      userTheme = GruvboxTheme;
+    } else if (userThemeInput.toLowerCase() == "nord") {
+      userTheme = NordTheme;
+    }
 
   } catch (err) {
     console.log("Error loading config:", err);
   }
 }
 
-var searchMode: "app" | "web" | "start" = "app";
+var searchMode: "app" | "web" | "start" | "aw" = "app";
 
 const program = new Command();
 
@@ -57,21 +67,35 @@ async function HandleArgv() {
   program
     .name("nero-launcher")
     .description("cli app launcher for linux")
-    .version("0.0.0");
+    .version(pkg.version);
 
   program
     .command("app")
+    .description("search for apps")
     .action(() => {
       searchMode = "app";
       initSearchModeApp();
       return;
     });
 
+
   program
     .command("web")
+    .description("search the web")
     .action(() => {
       searchMode = "web";
-      initSearchModeWeb();
+      let urlToSearch = 'https://' + webSearchEngine + '/search?q=';
+      initSearchModeWeb(urlToSearch, "web");
+      return;
+    });
+
+  program
+    .command("aw")
+    .description("search the arch wiki")
+    .action(() => {
+      searchMode = "aw";
+      let urlToSearch = 'https://wiki.archlinux.org/index.php?search=';
+      initSearchModeWeb(urlToSearch, "aw");
       return;
     });
 
@@ -130,7 +154,7 @@ async function launch(e: any) {
 async function searchApp(apps: any) {
   try {
     const answer = await search({
-      message: 'app',
+      message: 'app ',
       theme: userTheme,
       source: async (input) => {
         if (!input) {
@@ -175,11 +199,19 @@ async function initStartMenu() {
     console.log(userInfo.username);
     console.log("type " + chalk.yellow('app') + ' to search for apps');
     console.log("type " + chalk.yellow('web') + ' to search in the web');
-    const answer = await input({ message: '' });
+    console.log("type " + chalk.yellow('aw') + ' to search the arch wiki');
+    const answer = await input({ message: '', theme: userTheme });
     if (answer == "app") {
       initSearchModeApp();
     } else if (answer == "web") {
-      initSearchModeWeb();
+      let urlToSearch = 'https://' + webSearchEngine + '/search?q=';
+      initSearchModeWeb(urlToSearch, "web");
+    } else if (answer == "aw") {
+      let urlToSearch = 'https://wiki.archlinux.org/index.php?search=';
+      initSearchModeWeb(urlToSearch, "aw");
+    } else {
+      let urlToSearch = 'https://' + webSearchEngine + '/search?q=';
+      initSearchModeWeb(urlToSearch, "web");
     }
   } catch (err) {
     process.exit(0);
@@ -189,12 +221,11 @@ async function initStartMenu() {
 
 }
 
-async function initSearchModeWeb() {
+async function initSearchModeWeb(urlToSearch: string, mode: "web" | "aw") {
   console.clear();
   try {
-
-    const webSearch = await input({ message: 'web', theme: userTheme });
-    await open('https://' + webSearchEngine + '/search?q=' + webSearch);
+    const webSearch = await input({ message: mode, theme: userTheme });
+    await open(urlToSearch + webSearch);
   } catch (err) {
     process.exit(0);
   }

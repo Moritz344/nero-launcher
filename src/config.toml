@@ -3,4 +3,5 @@ show_stdout = false
 web_search_engine = "duckduckgo" # duckduckgo,google
 
 [interface]
+ascii = ""
 theme = "gruvbox" # gruvbox, nord
