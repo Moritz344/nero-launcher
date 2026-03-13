@@ -14,12 +14,11 @@ import {
 import { resolve } from "path";
 
 interface App {
-   name: string,
-   desc: string,
-   exec: string
+  name: string,
+  desc: string,
+  exec: any
 }
 
-// TODO: exec: execute a shell command 
 // TODO: show user name and ascii art make a var for the ascii art in the config file
 
 var config: any;
@@ -106,6 +105,7 @@ async function HandleArgv() {
 
   program
     .command("start")
+    .description("start menu")
     .action(() => {
       searchMode = "start";
       initStartMenu();
@@ -125,11 +125,11 @@ async function HandleArgv() {
 
 
 
-async function initDesktopFiles(path: string) {
+async function initDesktopFiles(path: string): Promise<App[]> {
   let desktopFiles = await readdir(path);
   let filteredFiles = desktopFiles.filter((element: any) => element.endsWith('.desktop'));
 
-  let filesArray: { exec: any, name: string, desc: string }[] = [{ exec: "", name: "", desc: "" }];
+  let filesArray: App[] = [{ exec: "", name: "", desc: "" }];
 
   filteredFiles.forEach((file: any) => {
     const content = readFileSync(`${path}${file}`, 'utf-8');
@@ -153,10 +153,24 @@ async function launch(e: any) {
   }
   const args = e.split(' ');
   const cmd = args.shift();
+
+  const checkArgsForPlaceholder = () => {
+    if (args.includes("--file-forwarding")) {
+      args.forEach((element: any) => {
+        if (element == "@@u" || element == "%u" || element == "@@") {
+          let index = args.indexOf(element);
+          args.splice(index);
+        }
+      })
+
+    }
+  }
+  checkArgsForPlaceholder();
+
   spawn(cmd!, args, { stdio: (config.general.show_stdout) ? 'inherit' : 'ignore' });
 }
 
-async function searchApp(apps: any) {
+async function searchApp(apps: App[] | any) {
   try {
     const answer = await search({
       message: 'app ',
@@ -177,9 +191,11 @@ async function searchApp(apps: any) {
         }));
       },
     });
-    if (answer) {
-      launch(answer);
+    if (!answer) {
+      console.log("I was not able to launch this app", answer);
+      return;
     }
+    await launch(answer);
   } catch (err) {
     return;
   }
@@ -189,9 +205,13 @@ async function searchApp(apps: any) {
 async function initSearchModeApp() {
   console.clear();
   let userInfo: any = getUserInfo();
+
+  let flatpakFiles = await initDesktopFiles("/var/lib/flatpak/exports/share/applications/"); // system flatpaks
+  let flatpakFilesSystem = await initDesktopFiles(userInfo.homedir + "/.local/share/flatpak/exports/share/applications/"); // user flatpaks
   let appsLocal = await initDesktopFiles("/usr/share/applications/"); // localy installed apps
   let appsUser = await initDesktopFiles(userInfo.homedir + "/.local/share/applications/"); // user installed apps
-  let mergedArray = appsLocal.concat(appsUser);
+
+  let mergedArray = appsLocal.concat(appsUser, flatpakFiles, flatpakFilesSystem);
   mergedArray.shift();
   searchApp(mergedArray);
 
