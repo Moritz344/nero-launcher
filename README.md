@@ -21,3 +21,10 @@ reads config at:
 ```bash
 ~/.config/nero-launcher/config.toml
 ```
+
+# Features
+- [x] load flatpak apps (system,user flatpaks)
+- [x] locally installed apps
+- [x] user installed apps
+- [x] search on the internet
+- [x] search in the arch wiki
