@@ -174,6 +174,7 @@ async function searchApp(apps: App[] | any) {
   try {
     const answer = await search({
       message: 'app ',
+      pageSize: 20,
       theme: userTheme,
       source: async (input) => {
         if (!input) {
