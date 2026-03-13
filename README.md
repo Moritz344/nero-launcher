@@ -11,7 +11,7 @@
 # Run From Source
 
 ```bash
-cd nero-launcher/
+cd nero-launcher/src
 bun install
 bun run index.ts
 ```
