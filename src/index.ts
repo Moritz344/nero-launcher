@@ -13,16 +13,21 @@ import {
 } from "./themes.ts";
 import { resolve } from "path";
 
-// TODO: theme is not working for web search only working when start => web
-// TODO: show number of found apps
+interface App {
+   name: string,
+   desc: string,
+   exec: string
+}
+
+// TODO: exec: execute a shell command 
+// TODO: show user name and ascii art make a var for the ascii art in the config file
 
 var config: any;
 var userTheme: any;
 var webSearchEngine: string = "";
+var searchMode: "app" | "web" | "start" | "aw" = "app";
 
 const pkg = JSON.parse(await Bun.file(resolve(import.meta.dirname, "../package.json")).text());
-
-
 
 async function loadConfigFile() {
   let default_config_path = os.homedir() + "/.config/nero-launcher/config.toml";
@@ -59,7 +64,7 @@ async function loadConfigFile() {
   }
 }
 
-var searchMode: "app" | "web" | "start" | "aw" = "app";
+
 
 const program = new Command();
 
