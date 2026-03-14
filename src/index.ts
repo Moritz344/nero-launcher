@@ -167,7 +167,11 @@ async function launch(e: any) {
   }
   checkArgsForPlaceholder();
 
-  spawn(cmd!, args, { stdio: (config.general.show_stdout) ? 'inherit' : 'ignore' });
+  const child = spawn(cmd!, args, {
+    stdio: (config.general.show_stdout) ? 'inherit' : 'ignore',
+    detached: true
+  });
+  child.unref();
 }
 
 async function searchApp(apps: App[] | any) {
