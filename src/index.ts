@@ -165,13 +165,24 @@ async function launch(e: any) {
   }
   checkArgsForPlaceholder();
 
+  try {
+    if (args.length > 0) {
+      Bun.spawn(["setsid", cmd!, ...args], {
+        cwd: process.cwd(),
+        stdout: (config.general.show_stdout) ? "inherit" : "ignore",
+        stderr: "inherit",
+      }).unref();
+    } else {
+      Bun.spawn(["setsid", cmd!], {
+        cwd: process.cwd(),
+        stdout: (config.general.show_stdout) ? "inherit" : "ignore",
+        stderr: "inherit",
+      }).unref();
 
-  if (args.length > 0) {
-    Bun.spawn(["sh", "-c", `${cmd!} ${args.join(' ')}`], {
-      cwd: process.cwd()
-    });
-  } else {
-    Bun.spawn(["sh", "-c", cmd!]);
+    }
+
+  } catch (err) {
+    console.log(err);
   }
 
 
@@ -247,7 +258,7 @@ async function initStartMenu() {
       initSearchModeWeb(urlToSearch, "web");
     }
   } catch (err) {
-    process.exit(0);
+    console.log(err);
   }
 
 
