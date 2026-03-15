@@ -1,5 +1,4 @@
 import { input, search } from '@inquirer/prompts';
-import { spawn, exec } from 'child_process';
 import os from 'os';
 import { Command } from "commander";
 import chalk from 'chalk';
@@ -154,24 +153,28 @@ async function launch(e: any) {
   const args = e.split(' ');
   const cmd = args.shift();
 
+  // remove placeholder
   const checkArgsForPlaceholder = () => {
-    if (args.includes("--file-forwarding")) {
-      args.forEach((element: any) => {
-        if (element == "@@u" || element == "%u" || element == "@@") {
-          let index = args.indexOf(element);
-          args.splice(index);
-        }
-      })
+    args.forEach((element: any) => {
+      if (element == "@@u" || element == "%u" || element == "%U" || element == "@@") {
+        let index = args.indexOf(element);
+        args.splice(index);
+      }
+    })
 
-    }
   }
   checkArgsForPlaceholder();
 
-  const child = spawn(cmd!, args, {
-    stdio: (config.general.show_stdout) ? 'inherit' : 'ignore',
-    detached: true
-  });
-  child.unref();
+
+  if (args.length > 0) {
+    Bun.spawn(["sh", "-c", `${cmd!} ${args.join(' ')}`], {
+      cwd: process.cwd()
+    });
+  } else {
+    Bun.spawn(["sh", "-c", cmd!]);
+  }
+
+
 }
 
 async function searchApp(apps: App[] | any) {
