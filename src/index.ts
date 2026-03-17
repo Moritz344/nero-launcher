@@ -170,13 +170,11 @@ async function launch(e: any) {
       Bun.spawn(["setsid", cmd!, ...args], {
         cwd: process.cwd(),
         stdout: (config.general.show_stdout) ? "inherit" : "ignore",
-        stderr: "inherit",
       }).unref();
     } else {
       Bun.spawn(["setsid", cmd!], {
         cwd: process.cwd(),
         stdout: (config.general.show_stdout) ? "inherit" : "ignore",
-        stderr: "inherit",
       }).unref();
 
     }
