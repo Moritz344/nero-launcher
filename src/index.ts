@@ -12,16 +12,16 @@ import {
 } from "./themes.ts";
 import { resolve } from "path";
 
+
 interface App {
   name: string,
   desc: string,
   exec: any
 }
 
-// TODO: show user name and ascii art make a var for the ascii art in the config file
-
 var config: any;
 var userTheme: any;
+var asciiArt: string = "";
 var webSearchEngine: string = "";
 var searchMode: "app" | "web" | "start" | "aw" = "app";
 
@@ -42,6 +42,7 @@ async function loadConfigFile() {
 
     let searchEngineInput = config.general.web_search_engine;
     let userThemeInput = config.interface.theme;
+    asciiArt = config.interface.ascii;
 
     if (searchEngineInput == "duckduckgo") {
       webSearchEngine = "duckduckgo.com";
@@ -238,6 +239,9 @@ async function initStartMenu() {
   console.clear();
   try {
     let userInfo: any = getUserInfo();
+    if (!config.general.disable_ascii) {
+      console.log(asciiArt);
+    }
     console.log(userInfo.username);
     console.log("type " + chalk.yellow('app') + ' to search for apps');
     console.log("type " + chalk.yellow('web') + ' to search in the web');
@@ -256,7 +260,7 @@ async function initStartMenu() {
       initSearchModeWeb(urlToSearch, "web");
     }
   } catch (err) {
-    console.log(err);
+    console.log("Goodbye");
   }
 
 

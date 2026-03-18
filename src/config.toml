@@ -1,7 +1,29 @@
 [general]
 show_stdout = false
 web_search_engine = "duckduckgo" # duckduckgo,google
+start_with_shell = false
+disable_ascii = false
 
 [interface]
-ascii = ""
+ascii = """
+                   -`
+                  .o+`                 
+                 `ooo/                 
+                `+oooo:                
+               `+oooooo:               
+               -+oooooo+:              
+             `/:-:++oooo+:             
+            `/++++/+++++++:            
+           `/++++++++++++++:           
+          `/+++ooooooooooooo/`         
+         ./ooosssso++osssssso+`        
+        .oossssso-````/ossssss+`       
+       -osssssso.      :ssssssso.      
+      :osssssss/        osssso+++.     
+     /ossssssss/        +ssssooo/-    
+   `/ossssso+/:-        -:/+osssso+-  
+  `+sso+:-`                 `.-/+oso: 
+ `++:.                           `-/+/
+ .`                                 `/
+"""
 theme = "gruvbox" # gruvbox, nord
