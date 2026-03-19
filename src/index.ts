@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { input, search } from '@inquirer/prompts';
 import os from 'os';
 import { Command } from "commander";
@@ -12,12 +13,13 @@ import {
 } from "./themes.ts";
 import { resolve } from "path";
 
-
 interface App {
   name: string,
   desc: string,
   exec: any
 }
+
+// TODO: inline math expressions
 
 var config: any;
 var userTheme: any;
@@ -74,11 +76,25 @@ async function HandleArgv() {
     .version(pkg.version);
 
   program
-    .command("app")
+    .command("apps")
     .description("search for apps")
     .action(() => {
       searchMode = "app";
       initSearchModeApp();
+      return;
+    });
+
+  program
+    .command("app")
+    .description("start app")
+    .argument("<app>", "app to start")
+    .action(async (app: string) => {
+      let foundApp: App = await findAppFromName(app);
+      if (!foundApp) {
+        console.log("I was not able to find this app");
+        return;
+      }
+      launch(foundApp.exec);
       return;
     });
 
@@ -96,10 +112,9 @@ async function HandleArgv() {
   program
     .command("aw")
     .description("search the arch wiki")
-    .action(() => {
+    .action((search: string) => {
       searchMode = "aw";
-      let urlToSearch = 'https://wiki.archlinux.org/index.php?search=';
-      initSearchModeWeb(urlToSearch, "aw");
+      initSearchModeWeb('https://wiki.archlinux.org/index.php?search=' + search, "aw");
       return;
     });
 
@@ -123,6 +138,17 @@ async function HandleArgv() {
   program.parse(process.argv);
 }
 
+async function findAppFromName(name: string): Promise<App> {
+  let flatpakFiles = await initDesktopFiles("/var/lib/flatpak/exports/share/applications/"); // system flatpaks
+  let flatpakFilesSystem = await initDesktopFiles(os.homedir + "/.local/share/flatpak/exports/share/applications/"); // user flatpaks
+  let appsLocal = await initDesktopFiles("/usr/share/applications/"); // localy installed apps
+  let appsUser = await initDesktopFiles(os.homedir + "/.local/share/applications/"); // user installed apps
+  let mergedArray = appsLocal.concat(appsUser, flatpakFiles, flatpakFilesSystem);
+
+  let foundApp = mergedArray.find((element: App) => element.name.includes(name));
+  return foundApp!;
+
+}
 
 
 async function initDesktopFiles(path: string): Promise<App[]> {
@@ -242,28 +268,55 @@ async function initStartMenu() {
     if (!config.general.disable_ascii) {
       console.log(asciiArt);
     }
+    let startMenuArray: { name: string, desc: string }[] = [{ name: "app", desc: "to search for apps" }];
+    startMenuArray.push({ name: "web", desc: "to search in the web" });
+    startMenuArray.push({ name: "aw", desc: "to search the arch wiki" });
+    startMenuArray.push({ name: "sh", desc: "to execute a shell command" });
+
     console.log(userInfo.username);
-    console.log("type " + chalk.yellow('app') + ' to search for apps');
-    console.log("type " + chalk.yellow('web') + ' to search in the web');
-    console.log("type " + chalk.yellow('aw') + ' to search the arch wiki');
+    startMenuArray.forEach((element: any) => {
+      console.log("type " + chalk.yellow(element.name) + ' ' + element.desc);
+    });
     const answer = await input({ message: '', theme: userTheme });
-    if (answer == "app") {
-      initSearchModeApp();
-    } else if (answer == "web") {
-      let urlToSearch = 'https://' + webSearchEngine + '/search?q=';
-      initSearchModeWeb(urlToSearch, "web");
-    } else if (answer == "aw") {
-      let urlToSearch = 'https://wiki.archlinux.org/index.php?search=';
-      initSearchModeWeb(urlToSearch, "aw");
-    } else {
-      let urlToSearch = 'https://' + webSearchEngine + '/search?q=';
-      initSearchModeWeb(urlToSearch, "web");
+
+    switch (answer) {
+      case "app":
+        initSearchModeApp();
+        break;
+      case "web":
+        initSearchModeWeb('https://' + webSearchEngine + '/search?q=', "web");
+        break;
+      case "aw":
+        initSearchModeWeb('https://wiki.archlinux.org/index.php?search=', "aw");
+        break;
+      case "sh":
+        initShellMode();
+        break;
+      default:
+        initSearchModeWeb('https://' + webSearchEngine + '/search?q=', "web");
+        break;
     }
   } catch (err) {
     console.log("Goodbye");
   }
+}
 
-
+async function initShellMode() {
+  console.clear();
+  try {
+    while (true) {
+      const shellCommand = await input({ message: 'sh', theme: userTheme });
+      let cmd = shellCommand.split(' ');
+      if (shellCommand) {
+        Bun.spawn(cmd, {
+          cwd: os.homedir(),
+          stdout: "inherit",
+        }).unref();
+      }
+    }
+  } catch (err) {
+    console.log("Goodbye");
+  }
 
 }
 
