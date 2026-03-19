@@ -112,7 +112,7 @@ async function HandleArgv() {
   program
     .command("aw")
     .description("search the arch wiki")
-    .action((search: string) => {
+    .action(() => {
       searchMode = "aw";
       initSearchModeWeb('https://wiki.archlinux.org/index.php?search=' + search, "aw");
       return;
