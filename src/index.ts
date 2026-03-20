@@ -19,6 +19,7 @@ interface App {
   exec: any
 }
 
+// TODO: searchModes from start menu
 // TODO: inline math expressions
 
 var config: any;
@@ -278,24 +279,50 @@ async function initStartMenu() {
       console.log("type " + chalk.yellow(element.name) + ' ' + element.desc);
     });
     const answer = await input({ message: '', theme: userTheme });
+    let splittedAnswer = answer.split(" ");
+    let cmd = splittedAnswer[0];
+    let args = splittedAnswer.slice(1);
 
-    switch (answer) {
-      case "app":
-        initSearchModeApp();
-        break;
-      case "web":
-        initSearchModeWeb('https://' + webSearchEngine + '/search?q=', "web");
-        break;
-      case "aw":
-        initSearchModeWeb('https://wiki.archlinux.org/index.php?search=', "aw");
-        break;
-      case "sh":
+    if (cmd == "sh") {
+      if (args.length > 0) {
+        Bun.spawn(args, {
+          cwd: os.homedir(),
+          stdout: "inherit",
+        }).unref();
+      } else {
         initShellMode();
-        break;
-      default:
+      }
+    } else if (cmd == "app") {
+      if (args.length > 0) {
+        let app = await findAppFromName(args.join(" "));
+        if (!app) {
+          console.log("I was not able to find this app");
+          return;
+        }
+        await launch(app.exec);
+      }
+    } else if (cmd == "web") {
+      if (args.length > 0) {
+        await open('https://' + webSearchEngine + '/search?q=' + args.join(" "));
+      } else {
         initSearchModeWeb('https://' + webSearchEngine + '/search?q=', "web");
-        break;
+      }
+    } else if (cmd == "aw") {
+      if (args.length > 0) {
+        await open('https://wiki.archlinux.org/index.php?search=' + args.join(" "));
+      } else {
+        initSearchModeWeb('https://wiki.archlinux.org/index.php?search=', "aw");
+      }
+    } else {
+      if (args.length > 0) {
+        await open('https://' + webSearchEngine + '/search?q=' + args.join(" "));
+      } else {
+        initSearchModeWeb('https://' + webSearchEngine + '/search?q=', "web");
+      }
+
     }
+
+
   } catch (err) {
     console.log("Goodbye");
   }
