@@ -300,6 +300,8 @@ async function initStartMenu() {
           return;
         }
         await launch(app.exec);
+      } else {
+        initSearchModeApp();
       }
     } else if (cmd == "web") {
       if (args.length > 0) {
